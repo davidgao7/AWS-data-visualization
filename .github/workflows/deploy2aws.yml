@@ -3,7 +3,7 @@ name: Deploy AWS Lambda Function
 on:
   push:
     branches:
-      - master
+      - master  # Using master branch
 
 jobs:
   deploy_lambda:
@@ -13,6 +13,22 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.13  # Match your Lambda runtime
+
+      - name: Install Dependencies to temp directory
+        run: |
+          mkdir -p lambda_package
+          pip install -r requirements.txt -t lambda_package
+          cp lambda_function.py lambda_package/
+
+      - name: Zip Lambda Function and Dependencies
+        run: |
+          cd lambda_package
+          zip -r ../function.zip .
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -20,12 +36,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Zip Lambda Function
-        run: |
-          zip -r function.zip lambda_function.py
-
       - name: Deploy to AWS Lambda
         run: |
           aws lambda update-function-code \
             --function-name ETLDataVisualizationJob \
             --zip-file fileb://function.zip
+
